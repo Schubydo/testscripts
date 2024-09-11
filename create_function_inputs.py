@@ -1,8 +1,29 @@
 import pandas as pd 
 
 def process_row(*args):
-    # Process the row data, placeholder
-    print(args)
+    cleaned_args = []
+    
+    for arg in args:
+        if isinstance(arg, str):
+            # Remove quotes around the string
+            arg = arg.replace('"', '')
+            
+            # Check if the string looks like a list and try to convert it to a real list
+            try:
+                # Use ast.literal_eval to convert string representations of lists to actual lists
+                evaluated_arg = ast.literal_eval(arg)
+                if isinstance(evaluated_arg, list):  # Ensure it converted to a list
+                    cleaned_args.append(evaluated_arg)
+                else:
+                    cleaned_args.append(arg)  # If not a list, keep as string
+            except (ValueError, SyntaxError):
+                # If it's not a list or can't be evaluated, just append the cleaned string
+                cleaned_args.append(arg)
+        else:
+            cleaned_args.append(arg)  # Non-string values remain unchanged
+    
+    # Process the cleaned row data (print for demonstration)
+    print("Cleaned row data:", cleaned_args)
 
 # Function to load and parse data from an Excel file
 def load_and_parse_excel(file_path, sheet_name=None):
