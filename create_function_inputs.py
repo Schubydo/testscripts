@@ -1,6 +1,7 @@
-import pandas as pd 
-import ast
+import pandas as pd
+import ast  # To safely evaluate string representations of lists
 
+# Function to process row data and handle conversion of string representations of lists
 def process_row(*args):
     cleaned_args = []
     
@@ -10,15 +11,19 @@ def process_row(*args):
             arg = arg.replace('"', '')
             
             # Check if the string looks like a list and try to convert it to a real list
-            try:
-                # Use ast.literal_eval to convert string representations of lists to actual lists
-                evaluated_arg = ast.literal_eval(arg)
-                if isinstance(evaluated_arg, list):  # Ensure it converted to a list
-                    cleaned_args.append(evaluated_arg)
-                else:
-                    cleaned_args.append(arg)  # If not a list, keep as string
-            except (ValueError, SyntaxError):
-                # If it's not a list or can't be evaluated, just append the cleaned string
+            if arg.startswith('[') and arg.endswith(']'):  # Only try to evaluate if it looks like a list
+                try:
+                    # Use ast.literal_eval to convert string representations of lists to actual lists
+                    evaluated_arg = ast.literal_eval(arg)
+                    if isinstance(evaluated_arg, list):  # Ensure it converted to a list
+                        cleaned_args.append(evaluated_arg)
+                    else:
+                        cleaned_args.append(arg)  # If not a list, keep as string
+                except (ValueError, SyntaxError):
+                    # If it's not a list or can't be evaluated, just append the cleaned string
+                    cleaned_args.append(arg)
+            else:
+                # For normal strings (such as file paths), just append them as is
                 cleaned_args.append(arg)
         else:
             cleaned_args.append(arg)  # Non-string values remain unchanged
