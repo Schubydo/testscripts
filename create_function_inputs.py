@@ -1,7 +1,7 @@
 import pandas as pd
 import ast  # To safely evaluate string representations of lists
 
-# Function to process row data and handle conversion of string representations of lists
+# Function to process row data and handle conversion of string representations of lists and file paths
 def process_row(*args):
     cleaned_args = []
     
@@ -23,8 +23,14 @@ def process_row(*args):
                     # If it's not a list or can't be evaluated, just append the cleaned string
                     cleaned_args.append(arg)
             else:
-                # For normal strings (such as file paths), just append them as is
-                cleaned_args.append(arg)
+                # For regular strings, treat as file paths or normal strings
+                # If it's a file path (starts with r' and ends with '), remove outer quotes
+                if arg.startswith("r'") and arg.endswith("'"):
+                    # Remove the outer quotes, keep the raw string indicator
+                    arg = arg[2:-1]
+                    cleaned_args.append(rf"{arg}")
+                else:
+                    cleaned_args.append(arg)  # Regular strings without raw file path
         else:
             cleaned_args.append(arg)  # Non-string values remain unchanged
     
