@@ -13,16 +13,18 @@ def load_and_parse_excel(file_path, sheet_name=None):
     if isinstance(data, pd.DataFrame):
         # Iterate over each row in the DataFrame
         for index, row in data.iterrows():
-            process_row(*row)
+            process_row(*row)  # Do the function here #
 
     elif isinstance(data, dict):
         for sheet, df in data.items():
             print(f"Processing sheet: {sheet}")
             for index, row in df.iterrows():
-                process_row(*row)
+                process_row(*row) # Do the function #
     else:
         print("Unexpected data format")
 
-# Example usage
-file_path = "TestExcel.xlsx"  # Path to Excel file
-load_and_parse_excel(file_path, sheet_name="Sheet1")  # You can also use sheet_name=None to load all sheets
+
+if __name__ == '__main__':
+    
+    file_path = "TestExcel.xlsx"  # Path to Excel file, python file and excel sheet will have to be in the same directory 
+    load_and_parse_excel(file_path, sheet_name="Sheet1")  # You can also use sheet_name=None to load all sheets
