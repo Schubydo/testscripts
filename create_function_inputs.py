@@ -7,35 +7,33 @@ def process_row(*args):
     
     for arg in args:
         if isinstance(arg, str):
-            # Remove quotes around the string
+            # Remove extra quotes around the string
             arg = arg.replace('"', '')
-            
+
             # Check if the string looks like a list and try to convert it to a real list
-            if arg.startswith('[') and arg.endswith(']'):  # Only try to evaluate if it looks like a list
+            if arg.startswith('[') and arg.endswith(']'):
                 try:
                     # Use ast.literal_eval to convert string representations of lists to actual lists
                     evaluated_arg = ast.literal_eval(arg)
-                    if isinstance(evaluated_arg, list):  # Ensure it converted to a list
+                    if isinstance(evaluated_arg, list):
                         cleaned_args.append(evaluated_arg)
                     else:
                         cleaned_args.append(arg)  # If not a list, keep as string
                 except (ValueError, SyntaxError):
-                    # If it's not a list or can't be evaluated, just append the cleaned string
-                    cleaned_args.append(arg)
+                    cleaned_args.append(arg)  # If not evaluable, append as string
             else:
-                # For regular strings, treat as file paths or normal strings
-                # If it's a file path (starts with r' and ends with '), remove outer quotes
+                # Handle raw file paths starting with r' and ending with '
                 if arg.startswith("r'") and arg.endswith("'"):
-                    # Remove the outer quotes, keep the raw string indicator
-                    arg = arg[2:-1]
-                    cleaned_args.append(rf"{arg}")
+                    # Reconstruct the raw string by removing 'r' and ensuring it's treated as raw
+                    raw_string = arg[2:-1]  # Remove the r' and '
+                    cleaned_args.append(rf"{raw_string}")  # Append as raw string
                 else:
-                    cleaned_args.append(arg)  # Regular strings without raw file path
+                    cleaned_args.append(arg)  # Append regular strings
         else:
             cleaned_args.append(arg)  # Non-string values remain unchanged
     
-    # Process the cleaned row data (print for demonstration)
-    print("Cleaned row data:", cleaned_args)
+    # Convert cleaned_args to a tuple
+    cleaned_args_tuple = tuple(cleaned_args)
 
 # Function to load and parse data from an Excel file
 def load_and_parse_excel(file_path, sheet_name=None):
