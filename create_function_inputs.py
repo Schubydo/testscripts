@@ -1,4 +1,5 @@
 import pandas as pd 
+import ast
 
 def process_row(*args):
     cleaned_args = []
