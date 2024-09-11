@@ -43,11 +43,9 @@ class TransformerNERModel(nn.Module):
 
 # NER Dataset
 class NERDataset(Dataset):
-    def __init__(self, texts, labels, max_len, label2id):
+    def __init__(self, texts, labels):
         self.texts = texts
         self.labels = labels
-        self.max_len = max_len
-        self.label2id = label2id
 
     def __len__(self):
         return len(self.texts)
@@ -56,19 +54,25 @@ class NERDataset(Dataset):
         text = self.texts[idx]
         labels = self.labels[idx]
 
-        text_ids = [ord(char) for char in text]  # Convert each character to its ASCII value
-        label_ids = [self.label2id[label] for label in labels]
-
-        # Padding
-        padding_length = self.max_len - len(text_ids)
-        if padding_length > 0:
-            text_ids = text_ids + [0] * padding_length
-            label_ids = label_ids + [self.label2id["O"]] * padding_length
-        else:
-            text_ids = text_ids[:self.max_len]
-            label_ids = label_ids[:self.max_len]
+        text_ids = [ord(char) for char in text]  # Convert characters to ASCII
+        label_ids = [label2id[label] for label in labels]
 
         return torch.tensor(text_ids, dtype=torch.long), torch.tensor(label_ids, dtype=torch.long)
+
+def pad_sequences(batch):
+    # Get the sequences and labels from the batch
+    texts, labels = zip(*batch)
+
+    # Find the maximum sequence length in this batch
+    max_len = max([len(seq) for seq in texts])
+
+    # Pad texts and labels to the max_len
+    padded_texts = [torch.cat([seq, torch.zeros(max_len - len(seq), dtype=torch.long)]) for seq in texts]
+    padded_labels = [torch.cat([label, torch.zeros(max_len - len(label), dtype=torch.long)]) for label in labels]
+
+    # Stack the padded sequences into a batch
+    return torch.stack(padded_texts), torch.stack(padded_labels)
+
 
 
 # Training Function
@@ -123,9 +127,9 @@ def evaluate(model, data_loader, criterion, device):
 
 
 # Prepare Data Loader
-def prepare_data(texts, labels, max_len, batch_size, label2id):
-    dataset = NERDataset(texts, labels, max_len, label2id)
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+def prepare_data(texts, labels, batch_size):
+    dataset = NERDataset(texts, labels)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_sequences)
     return data_loader
 
 
@@ -157,14 +161,35 @@ def train_ner_model(train_texts, train_labels, val_texts, val_labels, label2id, 
 
 # Example usage
 if __name__ == '__main__':
-    # Example data (replace with your own dataset)
-    train_texts = ["hello world", "i love transformers"]
-    train_labels = [["O", "O"], ["O", "O", "B-MISC"]]
 
-    val_texts = ["transformers are cool", "ner is fun"]
-    val_labels = [["B-MISC", "O", "O"], ["O", "O", "O"]]
+    train_texts = [
+        ["John", "lives", "in", "New", "York", "City", "and", "works", "at", "Google"],
+        ["Mary", "visited", "the", "Statue", "of", "Liberty", "in", "New", "York"]
+    ]
+    train_labels = [
+        ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "O", "O", "B-ORG"],
+        ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "B-LOC", "I-LOC"]
+    ]
 
-    label2id = {"O": 0, "B-MISC": 1}
+    val_texts = [["Tesla", "is", "based", "in", "Palo", "Alto"]]
+    val_labels = [["B-ORG", "O", "O", "O", "B-LOC", "I-LOC"]]
+
+    label2id = {"O": 0, "B-PER": 1, "I-PER": 2, "B-LOC": 3, "I-LOC": 4, "B-ORG": 5, "I-ORG": 6}
     num_classes = len(label2id)
 
     trained_model = train_ner_model(train_texts, train_labels, val_texts, val_labels, label2id, num_classes)
+
+
+    train_texts = [
+    ["John", "lives", "in", "New", "York", "City", "and", "works", "at", "Google"],
+    ["Mary", "visited", "the", "Statue", "of", "Liberty", "in", "New", "York"],
+    ["Apple", "Inc", "is", "a", "well-known", "company", "in", "California"],
+    ["Barack", "Obama", "was", "the", "44th", "president", "of", "the", "United", "States"],
+    ["Tesla", "is", "based", "in", "Palo", "Alto", "and", "led", "by", "Elon", "Musk"]]
+
+    train_labels = [
+    ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "O", "O", "B-ORG"],
+    ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "B-LOC", "I-LOC"],
+    ["B-ORG", "I-ORG", "O", "O", "O", "O", "B-LOC", "I-LOC"],
+    ["B-PER", "I-PER", "O", "O", "O", "O", "O", "O", "B-LOC", "I-LOC"],
+    ["B-ORG", "O", "O", "O", "B-LOC", "I-LOC", "O", "O", "O", "B-PER", "I-PER"]]
