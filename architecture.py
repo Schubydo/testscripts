@@ -24,6 +24,16 @@ def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
                 # Allow Excel to recalculate and update
                 app.api.Wait()  # Ensure Excel updates before saving
 
+                # Set the print area to cover the entire used range of the sheet
+                main_sheet.api.PageSetup.PrintArea = main_sheet.api.UsedRange.Address
+
+                # Set orientation to landscape
+                main_sheet.api.PageSetup.Orientation = 2  # 2 for landscape
+
+                # Adjust scaling to fit the sheet on one page if necessary
+                main_sheet.api.PageSetup.FitToPagesTall = False
+                main_sheet.api.PageSetup.FitToPagesWide = 1
+
                 # Define the output file path (PDF) in the working directory
                 sanitized_filter_value = "".join(char for char in filter_value if char.isalnum() or char in " _-")
                 output_pdf = os.path.join(output_dir, f"{sanitized_filter_value}.pdf")
