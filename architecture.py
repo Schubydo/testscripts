@@ -1,5 +1,6 @@
 import xlwings as xw
 import os
+import time
 
 def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
     app = None
@@ -15,14 +16,13 @@ def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
         # Reference the sheet with the dropdown list
         main_sheet = wb.sheets[0]  # Adjust as necessary, e.g., use wb.sheets['SheetName']
 
-        # Loop through the list of filter values
         for filter_value in filter_values:
             try:
                 # Set the dropdown cell value
                 main_sheet.range(dropdown_cell).value = filter_value
 
-                # Allow Excel to recalculate and update
-                app.api.Wait()  # Ensure Excel updates before saving
+                # Allow Excel to process the change
+                time.sleep(2)  # Wait for 2 seconds to allow Excel to update; adjust if needed
 
                 # Set the print area to cover the entire used range of the sheet
                 main_sheet.api.PageSetup.PrintArea = main_sheet.api.UsedRange.Address
