@@ -1,13 +1,12 @@
 import xlwings as xw
 import os
 
-def save_filtered_excel_to_pdf(file_path, output_dir, dropdown_cell, filter_values):
+def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
     app = None
     wb = None
     try:
-        # Ensure the output directory exists
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        # Get the current working directory
+        output_dir = os.getcwd()
 
         # Open the Excel file
         app = xw.App(visible=False)  # Make Excel run in the background
@@ -22,13 +21,14 @@ def save_filtered_excel_to_pdf(file_path, output_dir, dropdown_cell, filter_valu
                 # Set the dropdown cell value
                 main_sheet.range(dropdown_cell).value = filter_value
 
-                # Allow Excel to recalculate and update (optional sleep may be needed in some cases)
+                # Allow Excel to recalculate and update
                 app.api.Wait()  # Ensure Excel updates before saving
 
-                # Define the output file path (PDF)
-                output_pdf = os.path.join(output_dir, f"{filter_value}.pdf")
+                # Define the output file path (PDF) in the working directory
+                sanitized_filter_value = "".join(char for char in filter_value if char.isalnum() or char in " _-")
+                output_pdf = os.path.join(output_dir, f"{sanitized_filter_value}.pdf")
 
-                # Save the updated sheet as PDF (assume we want to save the same sheet)
+                # Export the updated sheet as PDF
                 main_sheet.api.ExportAsFixedFormat(0, output_pdf)
                 print(f"Saved updated view for '{filter_value}' as PDF: {output_pdf}")
 
@@ -54,8 +54,7 @@ def save_filtered_excel_to_pdf(file_path, output_dir, dropdown_cell, filter_valu
 # Usage example
 if __name__ == "__main__":
     excel_file = 'path_to_your_excel_file.xlsx'
-    output_folder = 'path_to_save_pdfs'
     dropdown_cell = 'A1'  # Cell address of the dropdown list
     filter_values = ['Value1', 'Value2', 'Value3']  # List of values to select from the dropdown
 
-    save_filtered_excel_to_pdf(excel_file, output_folder, dropdown_cell, filter_values)
+    save_filtered_excel_to_pdf(excel_file, dropdown_cell, filter_values)
