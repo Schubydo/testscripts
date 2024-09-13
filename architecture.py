@@ -2,7 +2,7 @@ import xlwings as xw
 import os
 import time
 
-def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
+def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values, print_range):
     app = None
     wb = None
     try:
@@ -24,8 +24,8 @@ def save_filtered_excel_to_pdf(file_path, dropdown_cell, filter_values):
                 # Allow Excel to process the change
                 time.sleep(2)  # Wait for 2 seconds to allow Excel to update; adjust if needed
 
-                # Set the print area to cover the entire used range of the sheet
-                main_sheet.api.PageSetup.PrintArea = main_sheet.api.UsedRange.Address
+                # Set the print area to the specified print range
+                main_sheet.api.PageSetup.PrintArea = print_range
 
                 # Set orientation to landscape
                 main_sheet.api.PageSetup.Orientation = 2  # 2 for landscape
@@ -66,5 +66,6 @@ if __name__ == "__main__":
     excel_file = 'path_to_your_excel_file.xlsx'
     dropdown_cell = 'A1'  # Cell address of the dropdown list
     filter_values = ['Value1', 'Value2', 'Value3']  # List of values to select from the dropdown
+    print_area = 'A1:G20'  # Specify the area you want to print (change as needed)
 
-    save_filtered_excel_to_pdf(excel_file, dropdown_cell, filter_values)
+    save_filtered_excel_to_pdf(excel_file, dropdown_cell, filter_values, print_area)
