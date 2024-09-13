@@ -1,7 +1,7 @@
 import xlwings as xw
 import os
 
-def save_filtered_excel_to_pdf(file_path, output_dir, sheet_name, filter_column, filter_values):
+def save_filtered_excel_to_pdf(file_path, output_dir, dropdown_cell, filter_values):
     app = None
     wb = None
     try:
@@ -13,24 +13,27 @@ def save_filtered_excel_to_pdf(file_path, output_dir, sheet_name, filter_column,
         app = xw.App(visible=False)  # Make Excel run in the background
         wb = app.books.open(file_path)
 
-        # Reference the sheet dynamically based on the passed sheet name
-        try:
-            sheet = wb.sheets[sheet_name]
-        except KeyError:
-            print(f"Error: Sheet '{sheet_name}' not found in {file_path}")
-            return
+        # Reference the sheet with the dropdown list
+        main_sheet = wb.sheets[0]  # Adjust as necessary, e.g., use wb.sheets['SheetName']
 
         # Loop through the list of filter values
         for filter_value in filter_values:
-            # Apply the filter to the specified column
-            sheet.range(filter_column).api.AutoFilter(Field=1, Criteria1=filter_value)
+            try:
+                # Set the dropdown cell value
+                main_sheet.range(dropdown_cell).value = filter_value
 
-            # Define the output file path (PDF)
-            output_pdf = os.path.join(output_dir, f"{sheet_name}_{filter_value}.pdf")
+                # Allow Excel to recalculate and update (optional sleep may be needed in some cases)
+                app.api.Wait()  # Ensure Excel updates before saving
 
-            # Export the filtered sheet as PDF
-            sheet.api.ExportAsFixedFormat(0, output_pdf)
-            print(f"Saved filtered view for '{filter_value}' as PDF: {output_pdf}")
+                # Define the output file path (PDF)
+                output_pdf = os.path.join(output_dir, f"{filter_value}.pdf")
+
+                # Save the updated sheet as PDF (assume we want to save the same sheet)
+                main_sheet.api.ExportAsFixedFormat(0, output_pdf)
+                print(f"Saved updated view for '{filter_value}' as PDF: {output_pdf}")
+
+            except Exception as e:
+                print(f"Error saving PDF for filter '{filter_value}': {e}")
 
     except Exception as e:
         print(f"Error occurred: {e}")
@@ -38,16 +41,21 @@ def save_filtered_excel_to_pdf(file_path, output_dir, sheet_name, filter_column,
     finally:
         # Ensure the workbook and Excel application are closed
         if wb:
-            wb.close()
+            try:
+                wb.close()
+            except Exception as e:
+                print(f"Error closing workbook: {e}")
         if app:
-            app.quit()
+            try:
+                app.quit()
+            except Exception as e:
+                print(f"Error quitting Excel application: {e}")
 
 # Usage example
 if __name__ == "__main__":
     excel_file = 'path_to_your_excel_file.xlsx'
     output_folder = 'path_to_save_pdfs'
-    sheet_name = 'Overview'  # Change to your sheet name
-    filter_column = 'A1'  # Adjust this to the header of the column you want to filter
-    filter_values = ['FilterValue1', 'FilterValue2']  # List of values to filter on
+    dropdown_cell = 'A1'  # Cell address of the dropdown list
+    filter_values = ['Value1', 'Value2', 'Value3']  # List of values to select from the dropdown
 
-    save_filtered_excel_to_pdf(excel_file, output_folder, sheet_name, filter_column, filter_values)
+    save_filtered_excel_to_pdf(excel_file, output_folder, dropdown_cell, filter_values)
