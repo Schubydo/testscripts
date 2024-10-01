@@ -7,7 +7,6 @@ from selenium.webdriver.edge.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-
 # Set the desired download location
 download_dir = '/path/to/your/custom/download/directory'
 
@@ -51,22 +50,27 @@ for i in range(min(5, len(rows))):
     
     first_cell = row.find_element(By.CSS_SELECTOR, '.gridxRowTable .gridxCell')
 
-    # Double-click the first cell in the current row to trigger the download
-    actions.double_click(first_cell).perform()
+    # Scroll to the element to ensure it's visible
+    driver.execute_script("arguments[0].scrollIntoView(true);", first_cell)
 
-    # Wait for a moment to allow the download to initiate
-    time.sleep(2)  # Adjust as necessary
+    # Make sure the element is visible and interactable
+    WebDriverWait(driver, 10).until(EC.visibility_of(first_cell))
+    WebDriverWait(driver, 10).until(EC.element_to_be_clickable(first_cell))
 
-    # Attempt to double-click using ActionChains
+    # Try double-clicking using ActionChains
     try:
         actions.double_click(first_cell).perform()
     except Exception as e:
         print(f"Failed to double-click using ActionChains: {str(e)}")
         # Fallback to JavaScript double-click
-        driver.execute_script("var evt = new MouseEvent('dblclick', { bubbles: true, cancelable: true }); arguments[0].dispatchEvent(evt);", first_cell)
+        driver.execute_script(
+            "var evt = new MouseEvent('dblclick', { bubbles: true, cancelable: true }); arguments[0].dispatchEvent(evt);",
+            first_cell
+        )
 
     # Wait for a moment to allow the download to initiate
     time.sleep(2)  # Adjust as necessary
 
 # Close the driver
 driver.quit()
+
