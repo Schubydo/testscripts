@@ -1,79 +1,42 @@
-import torch
-from torch.utils.data import DataLoader, Dataset
-from collections import defaultdict
+import pandas as pd
 
+# Load the Excel file into a DataFrame
+file_path = 'your_excel_file.xlsx'
+df = pd.read_excel(file_path)
 
-# Build vocabulary from the dataset
-def build_vocab(texts):
-    word2idx = defaultdict(lambda: len(word2idx))
-    word2idx["<PAD>"] = 0  # Padding token
-    word2idx["<UNK>"] = 1  # Unknown token for words not in vocabulary
+# Initialize an empty list to store the stacked data
+stacked_data = []
 
-    for sentence in texts:
-        for word in sentence:
-            word2idx[word]
-    
-    return dict(word2idx)
+# Iterate over the columns in groups of 5
+for i in range(0, len(df.columns), 5):
+    # Extract the relevant columns for the current group
+    policy_col = df.iloc[:, i]
+    pc_col = df.iloc[:, i + 1]
+    earned_col = df.iloc[:, i + 2]
+    ep_col = df.iloc[:, i + 3]
+    delta_col = df.iloc[:, i + 4]
 
+    # Extract the mm/yy part from the column headers
+    date_mm_yy = df.columns[i].split('/')[-1]
 
-# NER Dataset with vocab and label2id mapping
-class NERDataset(Dataset):
-    def __init__(self, texts, labels, vocab, label2id):
-        self.texts = texts
-        self.labels = labels
-        self.vocab = vocab
-        self.label2id = label2id
+    # Stack the columns into a temporary DataFrame
+    temp_df = pd.DataFrame({
+        'Policy': policy_col,
+        'PC': pc_col,
+        'Earned': earned_col,
+        'EP': ep_col,
+        'Delta': delta_col,
+        'Date': date_mm_yy
+    })
 
-    def __len__(self):
-        return len(self.texts)
+    # Append the temporary DataFrame to the stacked_data list
+    stacked_data.append(temp_df)
 
-    def __getitem__(self, idx):
-        text = self.texts[idx]
-        labels = self.labels[idx]
+# Concatenate all the temporary DataFrames into a single DataFrame
+final_df = pd.concat(stacked_data, ignore_index=True)
 
-        # Convert each word in the text to its corresponding index in the vocabulary
-        text_ids = [self.vocab.get(word, self.vocab["<UNK>"]) for word in text]
-        label_ids = [self.label2id[label] for label in labels]
+# Optionally, save the final stacked DataFrame to a new Excel file
+final_df.to_excel('stacked_output.xlsx', index=False)
 
-        return torch.tensor(text_ids, dtype=torch.long), torch.tensor(label_ids, dtype=torch.long)
-
-
-# Custom collate function to pad sequences in each batch
-def pad_sequences(batch):
-    texts, labels = zip(*batch)
-
-    max_len = max([len(seq) for seq in texts])
-
-    padded_texts = [torch.cat([seq, torch.zeros(max_len - len(seq), dtype=torch.long)]) for seq in texts]
-    padded_labels = [torch.cat([label, torch.zeros(max_len - len(label), dtype=torch.long)]) for label in labels]
-
-    return torch.stack(padded_texts), torch.stack(padded_labels)
-
-
-# Prepare Data Loader
-def prepare_data(texts, labels, batch_size, vocab, label2id):
-    dataset = NERDataset(texts, labels, vocab, label2id)
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_sequences)
-    return data_loader
-
-
-# Example usage:
-train_texts = [
-    ["John", "lives", "in", "New", "York", "City", "and", "works", "at", "Google"],
-    ["Mary", "visited", "the", "Statue", "of", "Liberty", "in", "New", "York"]
-]
-train_labels = [
-    ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "O", "O", "B-ORG"],
-    ["B-PER", "O", "O", "B-LOC", "I-LOC", "I-LOC", "O", "B-LOC", "I-LOC"]
-]
-
-val_texts = [["Tesla", "is", "based", "in", "Palo", "Alto"]]
-val_labels = [["B-ORG", "O", "O", "O", "B-LOC", "I-LOC"]]
-
-label2id = {"O": 0, "B-PER": 1, "I-PER": 2, "B-LOC": 3, "I-LOC": 4, "B-ORG": 5, "I-ORG": 6}
-vocab = build_vocab(train_texts + val_texts)
-
-# Prepare data loaders
-batch_size = 32
-train_loader = prepare_data(train_texts, train_labels, batch_size, vocab, label2id)
-val_loader = prepare_data(val_texts, val_labels, batch_size, vocab, label2id)
+# Print the final DataFrame for verification
+print(final_df)
