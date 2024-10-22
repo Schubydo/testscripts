@@ -34,12 +34,13 @@ def map_columns_to_template(df, column_mapping):
     return df[column_mapping.keys()]  # Return only template columns
 
 # Function to remove nuisance rows based on defined rules
-def remove_nuisance_rows(df):
+def remove_nuisance_rows(df, min_populated_ratio=0.2):
     """
     This function removes unwanted rows from the dataframe based on specific rules:
     - Removes rows with all NaN values.
     - Removes repeated header rows.
     - Removes rows with unwanted placeholder values like 'N/A', 'None', etc.
+    - Removes rows that are less than `min_populated_ratio` populated (default is 20%).
     """
     # Rule 1: Remove completely empty rows (where all values are NaN)
     df = df.dropna(how='all')
@@ -52,8 +53,13 @@ def remove_nuisance_rows(df):
     # Rule 3: Remove rows with placeholder values (e.g., 'N/A', 'None', etc.)
     placeholders = ['n/a', 'none', '', 'nan']  # Add more placeholder values as needed
     df = df.replace(placeholders, pd.NA).dropna(how='all')  # Replace and remove rows with placeholders
+    
+    # Rule 4: Drop rows that are less than `min_populated_ratio` populated
+    threshold = int(min_populated_ratio * len(df.columns))  # Calculate the minimum number of non-NaN values needed
+    df = df.dropna(thresh=threshold)  # Only keep rows with at least 'threshold' non-NaN values
 
     return df
+
 
 # Path to the directory containing the Excel files
 directory_path = '/path/to/your/excel/files'
