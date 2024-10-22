@@ -9,19 +9,23 @@ def clean_column_names(col_name):
 # Define a function to map columns to the template
 def map_columns_to_template(df, column_mapping):
     """
-    This function maps the columns of a dataframe to match the template based on column_mapping.
+    This function maps the columns of a dataframe to match the template based on partial matches in column_mapping.
     df: The dataframe to clean.
     column_mapping: A dictionary where the keys are template column names and the values are possible variants in the files.
     """
     # Create an empty dictionary to store renamed columns
     new_columns = {}
     
-    # Loop through the current dataframe columns and map to template
+    # Loop through the current dataframe columns
     for col in df.columns:
         cleaned_col = clean_column_names(col)
+        
+        # Try to map to the correct template column using partial matches
         for template_col, possible_names in column_mapping.items():
-            if cleaned_col in possible_names:
+            # If any part of the cleaned column contains a substring from the possible names, map it
+            if any(possible_name in cleaned_col for possible_name in possible_names):
                 new_columns[col] = template_col  # Map to template column name
+                break  # Stop searching after finding a match
     
     # Rename columns in the dataframe
     df = df.rename(columns=new_columns)
@@ -32,6 +36,7 @@ def map_columns_to_template(df, column_mapping):
             df[template_col] = pd.NA  # Add missing columns with empty values
     
     return df[column_mapping.keys()]  # Return only template columns
+
 
 # Function to remove nuisance rows based on defined rules
 def remove_nuisance_rows(df, min_populated_ratio=0.2):
