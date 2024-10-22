@@ -33,6 +33,28 @@ def map_columns_to_template(df, column_mapping):
     
     return df[column_mapping.keys()]  # Return only template columns
 
+# Function to remove nuisance rows based on defined rules
+def remove_nuisance_rows(df):
+    """
+    This function removes unwanted rows from the dataframe based on specific rules:
+    - Removes rows with all NaN values.
+    - Removes repeated header rows.
+    - Removes rows with unwanted placeholder values like 'N/A', 'None', etc.
+    """
+    # Rule 1: Remove completely empty rows (where all values are NaN)
+    df = df.dropna(how='all')
+    
+    # Rule 2: Remove rows with repeated headers (check if column names exist in the data)
+    # Example: if 'name' appears in the data (indicating a repeated header row)
+    header_keywords = list(column_mapping.keys())  # You can also define more keywords to identify header rows
+    df = df[~df.apply(lambda row: any([col_name in str(row).lower() for col_name in header_keywords]), axis=1)]
+    
+    # Rule 3: Remove rows with placeholder values (e.g., 'N/A', 'None', etc.)
+    placeholders = ['n/a', 'none', '', 'nan']  # Add more placeholder values as needed
+    df = df.replace(placeholders, pd.NA).dropna(how='all')  # Replace and remove rows with placeholders
+
+    return df
+
 # Path to the directory containing the Excel files
 directory_path = '/path/to/your/excel/files'
 
@@ -62,8 +84,11 @@ for file_name in os.listdir(directory_path):
         for sheet_name, df in sheets_dict.items():
             print(f"Processing sheet: {sheet_name} from file: {file_name}")
             
-            # Clean and map the columns to the template
-            df_cleaned = map_columns_to_template(df, column_mapping)
+            # Step 1: Remove nuisance rows before column mapping
+            df_cleaned = remove_nuisance_rows(df)
+            
+            # Step 2: Clean and map the columns to the template
+            df_cleaned = map_columns_to_template(df_cleaned, column_mapping)
             
             # Append the cleaned dataframe to the list
             cleaned_dataframes.append(df_cleaned)
