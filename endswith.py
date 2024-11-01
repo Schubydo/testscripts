@@ -1,28 +1,21 @@
-import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# Set up WebDriver
-driver = webdriver.Chrome()  # Replace with the path to your WebDriver
-driver.get("URL_OF_YOUR_PAGE")  # Replace with the actual URL of your page
+# Initialize the WebDriver and load the page
+driver = webdriver.Chrome()
+driver.get("your_url_here")
 
-try:
-    # Find all elements with an ID that starts with "dijit_TreeNode_"
-    elements = driver.find_elements(By.XPATH, "//*[starts-with(@id, 'dijit_TreeNode_')]")
+# Wait until the parent tree node is loaded
+wait = WebDriverWait(driver, 10)
+parent_tree_node = wait.until(EC.presence_of_element_located((By.XPATH, "your_parent_node_xpath_here")))
 
-    # Extract numbers from the IDs and find the largest one
-    max_number = -1  # Start with a minimum value
-    for elem in elements:
-        match = re.search(r"dijit_TreeNode_(\d+)", elem.get_attribute("id"))
-        if match:
-            node_number = int(match.group(1))
-            max_number = max(max_number, node_number)
+# Now find all descendant nodes with the 'dijit_tree_node' class within this parent node
+child_nodes = parent_tree_node.find_elements(By.XPATH, ".//div[contains(@class, 'dijit_tree_node')]")
 
-    print("Largest number in dijit_TreeNode_* IDs:", max_number)
+# Print the number of child nodes
+print("Number of child nodes:", len(child_nodes))
 
-except Exception as e:
-    print("Error:", e)
-
-finally:
-    driver.quit()
-ß
+# Close the driver
+driver.quit()
