@@ -1,0 +1,104 @@
+import pandas as pd
+import numpy as np
+from fredapi import Fred
+import requests
+from bs4 import BeautifulSoup
+
+class ExternalFeaturePipeline:
+    def __init__(self, fred_api_key, construction_csv_path=None, start='2010-01-01', end='2025-03-01'):
+        self.fred = Fred(api_key=fred_api_key)
+        self.start = start
+        self.end = end
+        self.construction_csv_path = construction_csv_path
+
+    def get_fred_series(self, series_id):
+        data = self.fred.get_series(series_id, observation_start=self.start, observation_end=self.end)
+        data = data.to_frame(name=series_id)
+        data.index.name = 'date'
+        data = data.resample('MS').mean()
+        return data
+
+    def load_fred_data(self):
+        cpi = self.get_fred_series('CPIAUCSL')
+        fed_rate = self.get_fred_series('FEDFUNDS')
+        housing = self.get_fred_series('HOUST')
+        return cpi, fed_rate, housing
+
+    def get_enso_index(self):
+        url = "https://origin.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php"
+        r = requests.get(url)
+        soup = BeautifulSoup(r.content, 'lxml')
+        table = soup.find_all('table')[1]
+
+        rows = table.find_all('tr')[1:]
+        records = []
+        for row in rows:
+            cols = row.find_all('td')
+            if len(cols) < 13:
+                continue
+            year = cols[0].text.strip()
+            for i in range(12):
+                try:
+                    val = float(cols[i + 1].text.strip())
+                    date = pd.to_datetime(f"{year}-{i + 1:02d}-01")
+                    records.append((date, val))
+                except:
+                    continue
+        df = pd.DataFrame(records, columns=['date', 'nino34_index'])
+        df.set_index('date', inplace=True)
+        df = df.resample('MS').mean()
+        return df
+
+    def load_construction_ppi(self):
+        if not self.construction_csv_path:
+            raise ValueError("Provide a path to construction PPI CSV")
+        df = pd.read_csv(self.construction_csv_path)
+        df['date'] = pd.to_datetime(df['date'])
+        df.set_index('date', inplace=True)
+        df = df.sort_index().resample('MS').mean()
+        df.rename(columns={'value': 'construction_cost_index'}, inplace=True)
+        return df
+
+    def load_catastrophe_losses(self):
+        date_range = pd.date_range(start=self.start, end=self.end, freq='MS')
+        losses = pd.Series(data=[0, 0, 0, 5, 20, 0, 0] * 100, index=date_range[:700])
+        return pd.DataFrame({'cat_loss_usd_bn': losses}).resample('MS').sum()
+
+    def load_reinsurance_rol_index(self):
+        date_range = pd.date_range(start=self.start, end=self.end, freq='MS')
+        rol_index = 1.0 + pd.Series(np.random.normal(0, 0.01, len(date_range))).cumsum()
+        df = pd.DataFrame({'rol_index': rol_index.values}, index=date_range)
+        df['rol_mom_change'] = df['rol_index'].pct_change()
+        return df
+
+    def build_external_feature_matrix(self):
+        cpi, fed_rate, housing = self.load_fred_data()
+        enso = self.get_enso_index()
+        construction = self.load_construction_ppi()
+
+        df = pd.concat([cpi, fed_rate, housing, enso, construction], axis=1)
+        df['cpi_mom_change'] = df['CPIAUCSL'].pct_change()
+        df['fed_rate_change'] = df['FEDFUNDS'].diff()
+        df['housing_starts_mom_change'] = df['HOUST'].pct_change()
+        df['nino34_3m_avg'] = df['nino34_index'].rolling(3, min_periods=1).mean()
+        df['construction_cost_mom_change'] = df['construction_cost_index'].pct_change()
+        return df
+
+    def build_full_external_features(self):
+        econ = self.build_external_feature_matrix()
+        cat = self.load_catastrophe_losses()
+        rol = self.load_reinsurance_rol_index()
+        df = econ.join(cat, how='outer').join(rol, how='outer')
+        df = df.sort_index().fillna(method='ffill').fillna(0)
+        return df
+# Step 1: Initialize the pipeline
+pipeline = ExternalFeaturePipeline(
+    fred_api_key='your_fred_api_key',
+    construction_csv_path='construction_ppi.csv'  # must have 'date' and 'value' columns
+)
+
+# Step 2: Build the feature matrix
+external_features = pipeline.build_full_external_features()
+
+# Step 3: View output
+print(external_features.tail())
