@@ -1,5 +1,50 @@
 import pandas as pd
 import numpy as np
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.preprocessing import StandardScaler
+
+# Assume df is your dataframe with 'rate_change' and exogenous variables
+# Ensure the datetime index is set
+df['date'] = pd.to_datetime(df['date'])  # Replace with your date column
+df.set_index('date', inplace=True)
+df = df.asfreq('MS')  # Monthly Start frequency
+
+# Create lagged versions of rate_change
+for lag in range(1, 13):  # Lag 1 to 12 months
+    df[f'rate_change_lag_{lag}'] = df['rate_change'].shift(lag)
+
+# Create lagged versions of exogenous variables
+exog_vars = ['var1', 'var2']  # Replace with your actual exogenous variables
+for var in exog_vars:
+    for lag in range(1, 13):
+        df[f'{var}_lag_{lag}'] = df[var].shift(lag)
+
+# Drop rows with NaNs due to lagging
+df_model = df.dropna()
+
+# Define target and exogenous features
+y = df_model['rate_change']
+X = df_model.drop(columns=['rate_change'])
+
+# Optional: scale exogenous variables
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train SARIMAX model (simple ARIMA terms here; tweak p,d,q/P,D,Q,s as needed)
+model = SARIMAX(y, exog=X_scaled, order=(1, 0, 0), seasonal_order=(1, 0, 0, 12))
+results = model.fit(disp=False)
+
+# Forecast 12 months ahead
+# Build future exogenous values (this must be based on your assumptions or a separate forecast)
+future_exog = X.tail(12).copy()  # Placeholder: adjust with actual future exogenous values
+future_exog_scaled = scaler.transform(future_exog)
+
+forecast = results.forecast(steps=12, exog=future_exog_scaled)
+
+# Output
+forecast.index = pd.date_range(start=df_model.index[-1] + pd.DateOffset(months=1), periods=12, freq='MS')
+print(forecast)import pandas as pd
+import numpy as np
 from xgboost import XGBRegressor
 import matplotlib.pyplot as plt
 
