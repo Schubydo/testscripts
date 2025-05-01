@@ -1,4 +1,26 @@
-import pandas as pd
+import matplotlib.pyplot as plt
+
+# Create forecast index
+forecast_index = pd.date_range(start=df_model.index[-1] + pd.DateOffset(months=1), periods=n_forecast, freq='MS')
+forecast_mean.index = forecast_index
+conf_int.index = forecast_index
+
+# Plot
+plt.figure(figsize=(12, 6))
+plt.plot(df['rate_change'], label='Observed', color='blue')
+plt.plot(forecast_mean, label='Forecast', color='orange')
+plt.fill_between(forecast_index,
+                 conf_int.iloc[:, 0],
+                 conf_int.iloc[:, 1],
+                 color='orange', alpha=0.3, label='Confidence Interval')
+
+plt.title('Rate Change Forecast with 95% Confidence Interval')
+plt.xlabel('Date')
+plt.ylabel('Rate Change')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()import pandas as pd
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.preprocessing import StandardScaler
