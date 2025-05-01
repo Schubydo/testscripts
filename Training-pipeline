@@ -1,0 +1,90 @@
+import pandas as pd
+import numpy as np
+from xgboost import XGBRegressor
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+
+def create_lagged_features(df, target_col='rate_change', max_lag=3):
+    df_lagged = df.copy()
+    
+    # Lag exogenous features
+    exogenous_cols = df.drop(columns=[target_col]).columns
+    for col in exogenous_cols:
+        for lag in range(1, max_lag + 1):
+            df_lagged[f'{col}_lag{lag}'] = df[col].shift(lag)
+
+    # Lag the target (autoregressive terms)
+    for lag in range(1, max_lag + 1):
+        df_lagged[f'{target_col}_lag{lag}'] = df[target_col].shift(lag)
+
+    df_lagged = df_lagged.dropna()
+    return df_lagged
+
+def train_initial_model(df, target_col='rate_change', max_lag=3, train_end_date='2024-12-01'):
+    df_lagged = create_lagged_features(df, target_col, max_lag)
+    df_lagged = df_lagged.sort_index()
+
+    train = df_lagged.loc[:train_end_date]
+    X_train = train.drop(columns=[target_col])
+    y_train = train[target_col]
+
+    model = XGBRegressor(n_estimators=200, learning_rate=0.05, max_depth=3)
+    model.fit(X_train, y_train)
+
+    return model, df_lagged
+
+def recursive_forecast(model, df_full, target_col='rate_change', forecast_start='2025-01-01', forecast_end='2025-12-01', max_lag=3):
+    forecast_dates = pd.date_range(start=forecast_start, end=forecast_end, freq='MS')
+    df_forecast = df_full.copy()
+    preds = []
+
+    for date in forecast_dates:
+        input_row = {}
+        
+        for col in df_forecast.columns:
+            if col == target_col:
+                continue
+            # Add lags for exogenous
+            for lag in range(1, max_lag + 1):
+                lag_date = date - pd.DateOffset(months=lag)
+                input_row[f'{col}_lag{lag}'] = df_forecast.loc[lag_date, col] if lag_date in df_forecast.index else np.nan
+        
+        for lag in range(1, max_lag + 1):
+            lag_date = date - pd.DateOffset(months=lag)
+            input_row[f'{target_col}_lag{lag}'] = df_forecast.loc[lag_date, target_col] if lag_date in df_forecast.index else np.nan
+
+        input_df = pd.DataFrame([input_row], index=[date])
+        if input_df.isnull().any().any():
+            raise ValueError(f'Missing data in lagged inputs at {date}')
+
+        pred = model.predict(input_df)[0]
+        df_forecast.loc[date, target_col] = pred
+        preds.append((date, pred))
+
+    forecast_series = pd.Series(dict(preds))
+    return forecast_series
+
+def plot_forecast(actual_series, predicted_series):
+    plt.figure(figsize=(10, 5))
+    actual_series.plot(label='Actual', marker='o')
+    predicted_series.plot(label='Forecast', marker='x')
+    plt.title('Rate Change Forecast (2025)')
+    plt.ylabel('Rate Change')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+# --- USAGE ---
+# Assumptions:
+# - df contains all features (monthly index), including 'rate_change' as the target
+# - Exogenous features are already merged in
+# - Last known data is Dec 2024
+
+# Train the model on all data up to Dec 2024
+model, df_lagged = train_initial_model(df, target_col='rate_change', max_lag=3, train_end_date='2024-12-01')
+
+# Forecast all of 2025
+forecast = recursive_forecast(model, df, target_col='rate_change', forecast_start='2025-01-01', forecast_end='2025-12-01', max_lag=3)
+
+# Plot results
+plot_forecast(df['rate_change'], forecast)
