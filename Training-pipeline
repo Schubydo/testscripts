@@ -2,6 +2,91 @@ import pandas as pd
 import numpy as np
 from xgboost import XGBRegressor
 import matplotlib.pyplot as plt
+
+def create_lagged_features(df, target_col='rate_change', max_lag=3):
+    df_lagged = df.copy()
+    exogenous_cols = df.drop(columns=[target_col]).columns
+
+    # Create lagged features
+    for col in exogenous_cols:
+        for lag in range(1, max_lag + 1):
+            df_lagged[f'{col}_lag{lag}'] = df_lagged[col].shift(lag)
+
+    for lag in range(1, max_lag + 1):
+        df_lagged[f'{target_col}_lag{lag}'] = df_lagged[target_col].shift(lag)
+
+    df_lagged = df_lagged.dropna()
+    return df_lagged
+
+def train_initial_model(df_lagged, target_col='rate_change', train_end_date='2024-12-01'):
+    df_lagged = df_lagged.sort_index()
+    train = df_lagged.loc[:train_end_date]
+
+    X_train = train.drop(columns=[target_col])
+    y_train = train[target_col]
+
+    model = XGBRegressor(n_estimators=200, learning_rate=0.05, max_depth=3)
+    model.fit(X_train, y_train)
+
+    return model, X_train.columns.tolist()
+
+def recursive_forecast(model, df_lagged, feature_names, target_col='rate_change', forecast_start='2025-01-01', forecast_end='2025-12-01', max_lag=3):
+    df_forecast = df_lagged.copy()
+    forecast_dates = pd.date_range(start=forecast_start, end=forecast_end, freq='MS')
+    preds = []
+
+    for date in forecast_dates:
+        input_row = {}
+        for col in feature_names:
+            lag_months = int(col.split('_lag')[-1]) if '_lag' in col else None
+            base_col = col.split('_lag')[0] if '_lag' in col else col
+            lag_date = date - pd.DateOffset(months=lag_months) if lag_months else None
+            input_row[col] = df_forecast.at[lag_date, base_col] if lag_date in df_forecast.index else np.nan
+
+        input_df = pd.DataFrame([input_row], index=[date])
+        input_df = input_df[feature_names]
+
+        if input_df.isnull().any().any():
+            raise ValueError(f'Missing lagged data at {date}')
+
+        pred = model.predict(input_df)[0]
+        df_forecast.loc[date, target_col] = pred
+
+        # Generate new lagged values dynamically
+        for lag in range(1, max_lag + 1):
+            future_date = date + pd.DateOffset(months=lag)
+            if future_date not in df_forecast.index:
+                df_forecast.loc[future_date] = np.nan
+            df_forecast.loc[future_date, f'{target_col}_lag{lag}'] = pred if lag == 1 else df_forecast.loc[future_date - pd.DateOffset(months=1), f'{target_col}_lag{lag - 1}']
+
+    return df_forecast.loc[forecast_start:forecast_end, target_col]
+
+def plot_forecast(actual_series, predicted_series):
+    plt.figure(figsize=(10, 5))
+    actual_series.plot(label='Actual', marker='o')
+    predicted_series.plot(label='Forecast', marker='x')
+    plt.title('Rate Change Forecast (2025)')
+    plt.ylabel('Rate Change')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+# --- USAGE ---
+
+# 1. Preprocess your DataFrame
+df_lagged = create_lagged_features(df, target_col='rate_change', max_lag=3)
+
+# 2. Train the model
+model, feature_names = train_initial_model(df_lagged, 'rate_change', train_end_date='2024-12-01')
+
+# 3. Recursive Forecast 2025
+forecast = recursive_forecast(model, df_lagged, feature_names, 'rate_change', '2025-01-01', '2025-12-01', max_lag=3)
+
+# 4. Plot
+plot_forecast(df['rate_change'], forecast)import pandas as pd
+import numpy as np
+from xgboost import XGBRegressor
+import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 
 def create_lagged_features(df, target_col='rate_change', max_lag=3):
