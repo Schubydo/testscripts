@@ -1,0 +1,31 @@
+def email_sov_summary(df, recipient_email, subject="SOV Summary Report"):
+    if df.empty:
+        print("DataFrame is empty. No email sent.")
+        return
+
+    # Generate summary
+    summary_lines = []
+
+    if "Occupancy" in df.columns and "TIV" in df.columns:
+        top_occupancy = df.groupby("Occupancy")["TIV"].sum().sort_values(ascending=False).head(5)
+        summary_lines.append("**Top Occupancies by TIV:**")
+        summary_lines += [f"{occ}: ${val:,.2f}" for occ, val in top_occupancy.items()]
+        summary_lines.append("")
+
+    if "City" in df.columns and "State" in df.columns:
+        location_spread = df.groupby(["State", "City"]).size().sort_values(ascending=False).head(10)
+        summary_lines.append("**Top Locations (State, City) by Count:**")
+        summary_lines += [f"{state}, {city}: {count}" for (state, city), count in location_spread.items()]
+        summary_lines.append("")
+
+    summary_text = "\n".join(summary_lines)
+
+    # Send email via Outlook
+    outlook = win32.Dispatch('outlook.application')
+    mail = outlook.CreateItem(0)
+    mail.To = recipient_email
+    mail.Subject = subject
+    mail.Body = f"Here is a summary of the standardized SOV data:\n\n{summary_text}"
+
+    mail.Send()  # Use .Display() instead to preview before sending
+    print(f"Email sent to {recipient_email}")
