@@ -1,0 +1,67 @@
+import re
+import pandas as pd
+
+class SOVStandardizer:
+    def __init__(self):
+        self.standard_columns = [
+            "Street Address",
+            "City",
+            "State",
+            "Zip",
+            "TIV",
+            "Building Value",
+            "Occupancy",
+            "Construction"
+        ]
+
+        self.fuzzy_patterns = {
+            "Street Address": [r'street', r'address', r'addr', r'location'],
+            "City": [r'city', r'town'],
+            "State": [r'state', r'\bst\b'],
+            "Zip": [r'zip', r'postcode', r'postal'],
+            "TIV": [r'tiv', r'total insured value'],
+            "Building Value": [r'building value', r'building cost', r'bldg val'],
+            "Occupancy": [r'occupancy', r'use', r'usage'],
+            "Construction": [r'construction', r'const', r'bldg type']
+        }
+
+    def fuzzy_match_column(self, col_name):
+        for standard_col, patterns in self.fuzzy_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, col_name, re.IGNORECASE):
+                    return standard_col
+        return None
+
+    def gpt_prompt(self, col_name):
+        # Replace this with an actual GPT API call
+        gpt_mapping = {
+            "Const Type": "Construction",
+            "Usage Type": "Occupancy"
+        }
+        return gpt_mapping.get(col_name, None)
+
+    def map_columns(self, input_columns):
+        mapped = {}
+        unmatched = []
+
+        for col in input_columns:
+            match = self.fuzzy_match_column(col)
+            if match:
+                mapped[col] = match
+            else:
+                unmatched.append(col)
+
+        for col in unmatched:
+            match = self.gpt_prompt(col)
+            if match:
+                mapped[col] = match
+            else:
+                mapped[col] = None
+
+        return mapped
+
+    def standardize_dataframe(self, df):
+        mapping = self.map_columns(df.columns)
+        reverse_map = {orig: std for orig, std in mapping.items() if std is not None}
+        df_standardized = df.rename(columns=reverse_map)
+        return df_standardized[[col for col in self.standard_columns if col in df_standardized.columns]]
