@@ -1,0 +1,20 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Load your NAICS codes and descriptions
+df = pd.read_csv("2022_naics_with_improved_keywords.csv")
+naics_text = df["keywords"] + " " + df["description"]
+
+# Create vectorizer and fit to NAICS descriptions
+vectorizer = TfidfVectorizer()
+naics_vectors = vectorizer.fit_transform(naics_text)
+
+def match_occupancy(occupancy_text, top_k=3):
+    occ_vector = vectorizer.transform([occupancy_text])
+    similarities = cosine_similarity(occ_vector, naics_vectors)[0]
+    top_indices = similarities.argsort()[::-1][:top_k]
+    return df.iloc[top_indices][["code", "description", "keywords"]].assign(similarity=similarities[top_indices])
+
+# Example
+print(match_occupancy("fast food restaurant"))
