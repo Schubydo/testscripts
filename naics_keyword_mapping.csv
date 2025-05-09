@@ -1,0 +1,71 @@
+Keyword,NAICS Code,NAICS Description
+residential,531110,Lessors of Residential Buildings and Dwellings
+apartment,531110,Lessors of Residential Buildings and Dwellings
+condo,531110,Lessors of Residential Buildings and Dwellings
+multi-family,531110,Lessors of Residential Buildings and Dwellings
+single family,531110,Lessors of Residential Buildings and Dwellings
+senior living,623311,Continuing Care Retirement Communities
+office,531120,Lessors of Nonresidential Buildings
+corporate,531120,Lessors of Nonresidential Buildings
+headquarters,531120,Lessors of Nonresidential Buildings
+data center,518210,"Data Processing, Hosting, and Related Services"
+retail,452210,Department Stores
+store,452210,Department Stores
+supermarket,445110,Supermarkets and Other Grocery Stores
+grocery,445110,Supermarkets and Other Grocery Stores
+pharmacy,446110,Pharmacies and Drug Stores
+drugstore,446110,Pharmacies and Drug Stores
+mall,452910,Warehouse Clubs and Supercenters
+boutique,448120,Women's Clothing Stores
+restaurant,722511,Full-Service Restaurants
+fast food,722513,Limited-Service Restaurants
+cafe,722513,Limited-Service Restaurants
+dining,722511,Full-Service Restaurants
+bar,722410,Drinking Places (Alcoholic Beverages)
+hotel,721110,Hotels and Motels
+motel,721110,Hotels and Motels
+hospitality,721110,Hotels and Motels
+school,611110,Elementary and Secondary Schools
+college,611310,"Colleges, Universities, and Professional Schools"
+university,611310,"Colleges, Universities, and Professional Schools"
+training center,611519,Other Technical and Trade Schools
+hospital,622110,General Medical and Surgical Hospitals
+clinic,621111,Offices of Physicians (except Mental Health)
+urgent care,621498,All Other Outpatient Care Centers
+nursing home,623110,Nursing Care Facilities
+rehab,623220,Residential Mental Health and Substance Abuse Facilities
+warehouse,493110,General Warehousing and Storage
+distribution,493110,General Warehousing and Storage
+storage,493110,General Warehousing and Storage
+manufacturing,311000,Food Manufacturing
+factory,311000,Food Manufacturing
+plant,311000,Food Manufacturing
+industrial,311000,Food Manufacturing
+auto repair,811111,General Automotive Repair
+car service,811111,General Automotive Repair
+laundry,812320,Drycleaning and Laundry Services
+salon,812112,Beauty Salons
+barber,812111,Barber Shops
+bank,522110,Commercial Banking
+atm,522110,Commercial Banking
+insurance,524210,Insurance Agencies and Brokerages
+church,813110,Religious Organizations
+temple,813110,Religious Organizations
+synagogue,813110,Religious Organizations
+police,922120,Police Protection
+fire station,922160,Fire Protection
+correctional,922140,Correctional Institutions
+government,921190,Other General Government Support
+cinema,512131,Motion Picture Theaters
+movie theater,512131,Motion Picture Theaters
+gym,713940,Fitness and Recreational Sports Centers
+fitness,713940,Fitness and Recreational Sports Centers
+theater,711110,Theater Companies and Dinner Theaters
+stadium,711211,Sports Teams and Clubs
+arena,711211,Sports Teams and Clubs
+museum,712110,Museums
+parking garage,812930,Parking Lots and Garages
+parking lot,812930,Parking Lots and Garages
+fuel,447110,Gasoline Stations with Convenience Stores
+gas station,447110,Gasoline Stations with Convenience Stores
+convention center,721110,Hotels and Motels
