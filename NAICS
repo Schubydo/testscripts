@@ -1,0 +1,37 @@
+import pandas as pd
+from fuzzywuzzy import fuzz, process
+import re
+
+# Load CSV to build the mapping
+def load_naics_map_from_csv(csv_path):
+    df = pd.read_csv(csv_path)
+    return {
+        row["Keyword"]: (str(row["NAICS Code"]), row["NAICS Description"])
+        for _, row in df.iterrows()
+    }
+
+# Call once to load the map
+NAICS_KEYWORDS_MAP = load_naics_map_from_csv("naics_keyword_mapping.csv")
+
+def clean_occupancy(text):
+    if not text or not isinstance(text, str):
+        return ""
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def fuzzy_naics_from_occupancy(occupancy_text, threshold=75):
+    cleaned = clean_occupancy(occupancy_text)
+    keywords = list(NAICS_KEYWORDS_MAP.keys())
+    best_match, score = process.extractOne(cleaned, keywords, scorer=fuzz.token_sort_ratio)
+    if score >= threshold:
+        code, desc = NAICS_KEYWORDS_MAP[best_match]
+        return code, desc
+    return "000000", "Unknown"
+
+def enrich_with_naics(df):
+    results = df["Occupancy"].apply(fuzzy_naics_from_occupancy)
+    df["NAICS Code"] = results.apply(lambda x: x[0])
+    df["NAICS Description"] = results.apply(lambda x: x[1])
+    return df
