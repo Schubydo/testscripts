@@ -1,0 +1,59 @@
+import pandas as pd
+import re
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+# Load your NAICS CSV
+df = pd.read_csv("2022-naics-hd.csv")  # Adjust path if needed
+
+# Add additional non-useful terms to remove
+custom_stopwords = ENGLISH_STOP_WORDS.union({
+    "services", "establishments", "companies", "activities", "facilities", 
+    "institutions", "organizations", "offices", "operations", 
+    "support", "related", "general", "other", "naics"
+})
+
+# Function to extract concise, relevant keywords
+def extract_concise_keywords(description):
+    if not isinstance(description, str):
+        return ""
+    words = re.findall(r'\b[a-z]+\b', description.lower())
+    filtered = [word for word in words if word not in custom_stopwords and len(word) > 2]
+    return ", ".join(sorted(set(filtered)))
+
+# Apply keyword extraction
+df["keywords"] = df["description"].apply(extract_concise_keywords)
+
+# Save to new CSV
+df.to_csv("2022_naics_with_improved_keywords.csv", index=False)
+print("Saved as 2022_naics_with_improved_keywords.csv")
+
+import pandas as pd
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+# Load NAICS data with cleaned 'keywords'
+naics_df = pd.read_csv("2022_naics_with_improved_keywords.csv")
+
+# Combine keywords and descriptions for embedding context
+naics_df["text_for_embedding"] = naics_df["keywords"] + " - " + naics_df["description"]
+
+# Load sentence transformer model
+model = SentenceTransformer('all-MiniLM-L6-v2')  # lightweight and fast
+
+# Encode all NAICS entries into vectors
+naics_embeddings = model.encode(naics_df["text_for_embedding"].tolist(), convert_to_tensor=True)
+
+# Function to match a new Occupancy string
+def match_occupancy_to_naics(occupancy_text, top_k=3):
+    occ_vector = model.encode([occupancy_text], convert_to_tensor=True)
+    similarities = cosine_similarity(occ_vector, naics_embeddings)[0]
+    
+    top_indices = similarities.argsort()[::-1][:top_k]
+    matches = naics_df.iloc[top_indices][["code", "description", "keywords"]].copy()
+    matches["similarity"] = similarities[top_indices]
+    return matches
+
+# Example usage
+results = match_occupancy_to_naics("fast food restaurant")
+print(results)
