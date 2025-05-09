@@ -1,0 +1,29 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Load your NAICS data
+naics_df = pd.read_csv("2022-naics-hd.csv")
+
+# Combine title and description for vectorization
+naics_df["combined_text"] = (
+    naics_df["Title"].fillna('') + " " + naics_df["NAICS Description"].fillna('')
+)
+
+# Create TF-IDF vector space
+vectorizer = TfidfVectorizer()
+naics_vectors = vectorizer.fit_transform(naics_df["combined_text"])
+
+# Function: match occupancy to top NAICS
+def match_occupancy_top(occupancy_text):
+    occ_vector = vectorizer.transform([occupancy_text])
+    similarities = cosine_similarity(occ_vector, naics_vectors)[0]
+    best_index = similarities.argmax()
+    return {
+        "NAICS Code": naics_df.iloc[best_index]["NAICS Code"],
+        "Title": naics_df.iloc[best_index]["Title"],
+        "Description": naics_df.iloc[best_index]["NAICS Description"]
+    }
+
+# Example
+print(match_occupancy_top("fast food restaurant"))
