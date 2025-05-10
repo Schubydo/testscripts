@@ -1,0 +1,60 @@
+import requests
+from bs4 import BeautifulSoup
+from time import sleep
+
+class CompanyOccupancyScraper:
+    def __init__(self, match_func=None, delay=1.0):
+        """
+        match_func: a callable like match_occupancy_top that takes a string and returns NAICS info
+        delay: seconds to sleep between requests to avoid being blocked
+        """
+        self.match_func = match_func
+        self.delay = delay
+
+    def search_duckduckgo(self, query, max_results=3):
+        url = f"https://html.duckduckgo.com/html?q={query}"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        results = soup.find_all("a", class_="result__a", limit=max_results)
+        return [r.get("href") for r in results]
+
+    def extract_summary(self, url):
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            resp = requests.get(url, timeout=5, headers=headers)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+
+            # Try meta description
+            desc = soup.find("meta", attrs={"name": "description"})
+            if desc and desc.get("content"):
+                return desc["content"]
+
+            # Fallback to first paragraph
+            p = soup.find("p")
+            return p.get_text(strip=True) if p else None
+        except Exception:
+            return None
+
+    def get_occupancy_description(self, company_name):
+        query = f"{company_name} company description"
+        urls = self.search_duckduckgo(query)
+        for url in urls:
+            sleep(self.delay)
+            summary = self.extract_summary(url)
+            if summary:
+                return summary
+        return "Unknown business type"
+
+    def classify_company(self, company_name):
+        description = self.get_occupancy_description(company_name)
+        if self.match_func:
+            return {
+                "company": company_name,
+                "description": description,
+                "naics_match": self.match_func(description)
+            }
+        return {
+            "company": company_name,
+            "description": description
+        }
