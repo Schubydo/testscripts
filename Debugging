@@ -1,0 +1,3 @@
+property_accessor = msg.PropertyAccessor
+sender_email = property_accessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x5D01001F")
+print("Sender Email:", sender_email)
