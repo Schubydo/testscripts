@@ -2,6 +2,32 @@ import re
 import dateparser
 
 def extract_incept_date(subject):
+    # Updated regex patterns to cover a wider variety of formats
+    date_patterns = [
+        r'\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b',                             # 23/05/2025, 1/7
+        r'\b\d{1,2}(st|nd|rd|th)?\s+(of\s+)?[A-Za-z]+\s*[-]?\s*\d{2,4}\b',     # 1st of July - 2025, 1st July 2025
+        r'\b\d{1,2}\s+[A-Za-z]+\s*[-]?\s*\d{2,4}?\b',                          # 26 May 2025, 26 May
+        r'\b\d{1,2}\.\d{1,2}(?:\.\d{2,4})?\b',                                 # 31.05 or 31.05.2025
+    ]
+
+    combined_pattern = '|'.join(date_patterns)
+    match = re.search(combined_pattern, subject)
+
+    if match:
+        date_str = match.group()
+        parsed_date = dateparser.parse(date_str, settings={'PREFER_DATES_FROM': 'future'})
+        if parsed_date:
+            return parsed_date.strftime('%d/%m/%y')
+
+    return None
+
+# Example usage:
+subject = "Deadline is 1st of July - 2025"
+incept_date = extract_incept_date(subject)
+print(incept_date)  # Output: 01/07/25import re
+import dateparser
+
+def extract_incept_date(subject):
     # Regex patterns to match various date formats
     date_patterns = [
         r'\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b',                  # 23/05/2025 or 1/7
