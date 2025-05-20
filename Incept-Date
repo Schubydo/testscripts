@@ -1,6 +1,61 @@
 import re
 import dateparser
 
+def extract_date_near_keywords(body):
+    # Keywords to look for
+    keywords = ['incept date', 'inception', 'period']
+
+    # Combine keywords into one regex pattern (case insensitive)
+    keyword_pattern = r'(?i)\b(?:' + '|'.join(re.escape(k) for k in keywords) + r')\b'
+
+    # Find all matches and get a text window around each
+    matches = [m.start() for m in re.finditer(keyword_pattern, body)]
+    
+    for start_index in matches:
+        # Extract a small context window around the keyword
+        context_window = body[start_index:start_index + 100]  # Adjust size if needed
+
+        # Try to extract date from this window
+        date = extract_date_from_text(context_window)
+        if date:
+            return date
+
+    return None
+
+def extract_date_from_text(text):
+    # Date patterns to capture common date formats
+    date_patterns = [
+        r'\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b',                            # 23/05/2025 or 1/7
+        r'\b\d{1,2}(st|nd|rd|th)?\s+(of\s+)?[A-Za-z]+\s*[-]?\s*\d{2,4}?\b',   # 1st of July - 2025
+        r'\b\d{1,2}\s+[A-Za-z]+\s*[-]?\s*\d{0,4}\b',                          # 26 May
+        r'\b\d{1,2}\.\d{1,2}(?:\.\d{2,4})?\b',                                # 31.05 or 31.05.2025
+    ]
+
+    combined_pattern = '|'.join(date_patterns)
+    match = re.search(combined_pattern, text)
+
+    if match:
+        date_str = match.group()
+        parsed = dateparser.parse(date_str, settings={'PREFER_DATES_FROM': 'future'})
+        if parsed:
+            return parsed.strftime('%d/%m/%y')
+
+    return None
+
+# Example usage
+body = """
+Dear Client,
+
+Please note the incept date is 1st of July - 2025. The policy starts from then.
+
+Regards,
+Team
+"""
+
+incept_date = extract_date_near_keywords(body)
+print(incept_date)  # Output: 01/07/25import re
+import dateparser
+
 def extract_incept_date(subject):
     # Updated regex patterns to cover a wider variety of formats
     date_patterns = [
