@@ -1,0 +1,26 @@
+import pandas as pd
+from fuzzywuzzy import fuzz
+
+def find_fuzzy_clashes(insured_name, csv_path, column_name='Insured Name', threshold=90):
+    """
+    Checks for fuzzy matches of an insured name against names in a CSV file.
+
+    Parameters:
+    - insured_name (str): The name to check.
+    - csv_path (str): Path to the CSV file.
+    - column_name (str): Name of the column in the CSV that contains insured names.
+    - threshold (int): Fuzzy match threshold (0–100). Higher = stricter.
+
+    Returns:
+    - pandas.DataFrame containing rows that match above the threshold.
+    """
+    df = pd.read_csv(csv_path)
+
+    # Ensure the column exists
+    if column_name not in df.columns:
+        raise ValueError(f"Column '{column_name}' not found in the CSV file.")
+
+    # Apply fuzzy matching
+    matches = df[df[column_name].apply(lambda x: fuzz.token_set_ratio(insured_name, str(x)) >= threshold)]
+
+    return matches
