@@ -1,0 +1,46 @@
+Sub CopyCellsToTableRow()
+
+    ' Source and destination sheets
+    Dim wsSource As Worksheet
+    Dim wsTarget As Worksheet
+    
+    Set wsSource = ThisWorkbook.Sheets("Sheet1")
+    Set wsTarget = ThisWorkbook.Sheets("Sheet2")
+
+    ' Determine next empty row in target sheet (assumes table starts at row 2, headers in row 1)
+    Dim nextRow As Long
+    nextRow = wsTarget.Cells(wsTarget.Rows.Count, "A").End(xlUp).Row + 1
+
+    ' Copy specific cells to corresponding columns in the next row of target sheet
+    wsTarget.Cells(nextRow, 1).Value = wsSource.Range("A1").Value   ' Column A
+    wsTarget.Cells(nextRow, 2).Value = wsSource.Range("B2").Value   ' Column B
+    wsTarget.Cells(nextRow, 3).Value = wsSource.Range("C3").Value   ' Column C
+
+    MsgBox "Data copied to Sheet2, row " & nextRow
+
+End Sub
+
+Sub CopyCellsToTableRow()
+
+    ' Source and destination sheets
+    Dim wsSource As Worksheet
+    Dim wsTarget As Worksheet
+    
+    Set wsSource = ThisWorkbook.Sheets("Sheet1")
+    Set wsTarget = ThisWorkbook.Sheets("Sheet2")
+
+    ' Determine next empty row in target sheet
+    Dim nextRow As Long
+    nextRow = wsTarget.Cells(wsTarget.Rows.Count, "A").End(xlUp).Row + 1
+
+    ' Copy specific cells to corresponding columns in the next row
+    wsTarget.Cells(nextRow, 1).Value = wsSource.Range("A1").Value   ' Column A
+    wsTarget.Cells(nextRow, 2).Value = wsSource.Range("B2").Value   ' Column B
+    wsTarget.Cells(nextRow, 3).Value = wsSource.Range("C3").Value   ' Column C
+
+    ' Write current date to Column D
+    wsTarget.Cells(nextRow, 4).Value = Date                         ' Column D
+
+    MsgBox "Data copied to Sheet2, row " & nextRow & " with date " & Date
+
+End Sub
