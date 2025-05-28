@@ -1,0 +1,47 @@
+Sub CopyCellsToAnotherWorkbook()
+
+    ' Declare workbook and worksheet variables
+    Dim wbSource As Workbook
+    Dim wsSource As Worksheet
+    
+    Dim wbTarget As Workbook
+    Dim wsTarget As Worksheet
+    
+    Dim targetPath As String
+    Dim nextRow As Long
+
+    ' Set source workbook and sheet
+    Set wbSource = ThisWorkbook
+    Set wsSource = wbSource.Sheets("Sheet1")
+    
+    ' Set path to the target workbook
+    targetPath = "C:\Users\YourName\Documents\TargetWorkbook.xlsx"
+    
+    ' Open target workbook (if not already open)
+    On Error Resume Next
+    Set wbTarget = Workbooks("TargetWorkbook.xlsx")
+    On Error GoTo 0
+    
+    If wbTarget Is Nothing Then
+        Set wbTarget = Workbooks.Open(targetPath)
+    End If
+
+    ' Set target worksheet
+    Set wsTarget = wbTarget.Sheets("DataSheet")
+    
+    ' Find next empty row in target sheet (assuming data starts in column A)
+    nextRow = wsTarget.Cells(wsTarget.Rows.Count, "A").End(xlUp).Row + 1
+
+    ' Copy data from source to target
+    wsTarget.Cells(nextRow, 1).Value = wsSource.Range("A1").Value
+    wsTarget.Cells(nextRow, 2).Value = wsSource.Range("B2").Value
+    wsTarget.Cells(nextRow, 3).Value = wsSource.Range("C3").Value
+    wsTarget.Cells(nextRow, 4).Value = Date   ' Or use Now for date+time
+
+    ' Save and optionally close target workbook
+    wbTarget.Save
+    ' wbTarget.Close SaveChanges:=True  ' Uncomment to close the target workbook after writing
+
+    MsgBox "Data copied to external workbook: Row " & nextRow
+
+End Sub
