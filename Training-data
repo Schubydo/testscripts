@@ -1,0 +1,45 @@
+import os
+import pandas as pd
+
+def extract_columns_from_excel(file_path, max_samples=5):
+    try:
+        df = pd.read_excel(file_path, engine='openpyxl')
+    except Exception as e:
+        print(f"Skipping {file_path}: {e}")
+        return []
+
+    extracted = []
+    for col in df.columns:
+        if pd.isna(col):  # Skip unnamed columns
+            continue
+        try:
+            samples = df[col].dropna().astype(str).head(max_samples)
+            sample_str = "; ".join(samples)
+            extracted.append({
+                "column_header": str(col),
+                "sample_values": sample_str,
+                "file_name": os.path.basename(file_path)
+            })
+        except Exception as e:
+            print(f"Error processing column '{col}' in {file_path}: {e}")
+            continue
+    return extracted
+
+def process_folder(folder_path, output_csv="data/extracted_column_samples.csv"):
+    all_data = []
+
+    for fname in os.listdir(folder_path):
+        if not fname.endswith(('.xlsx', '.xls')):
+            continue
+        fpath = os.path.join(folder_path, fname)
+        print(f"Processing {fpath}")
+        col_data = extract_columns_from_excel(fpath)
+        all_data.extend(col_data)
+
+    output_df = pd.DataFrame(all_data)
+    output_df.to_csv(output_csv, index=False)
+    print(f"Saved extracted data to {output_csv}")
+
+if __name__ == "__main__":
+    folder = "data/raw_excels"
+    process_folder(folder)
