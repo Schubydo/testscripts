@@ -1,0 +1,71 @@
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from imblearn.over_sampling import RandomOverSampler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+import joblib
+import os
+
+
+# ------------ SETTINGS ------------
+LABEL_CSV_PATH = "data/labeled_columns.csv"   # <- Your labeled training data
+MODEL_SAVE_PATH = "model/column_classifier.pkl"
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
+# ----------------------------------
+
+
+def build_feature_text(header, sample_values):
+    return f"{header} | {sample_values}"
+
+
+def load_and_prepare_data(csv_path):
+    df = pd.read_csv(csv_path)
+    df.dropna(subset=["column_header", "sample_values", "label"], inplace=True)
+
+    # Build combined text features
+    df["features"] = df.apply(lambda row: build_feature_text(row["column_header"], row["sample_values"]), axis=1)
+
+    X = df["features"]
+    y = df["label"]
+    return X, y
+
+
+def balance_data(X, y):
+    # Oversample minority classes to balance dataset
+    ros = RandomOverSampler(random_state=RANDOM_STATE)
+    X_resampled, y_resampled = ros.fit_resample(X.values.reshape(-1, 1), y)
+    X_resampled = X_resampled.ravel()  # flatten back to 1D
+    return X_resampled, y_resampled
+
+
+def train_and_save_model(X, y, save_path):
+    pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
+        ("clf", LogisticRegression(max_iter=1000, class_weight='balanced'))
+    ])
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+
+    pipeline.fit(X_train, y_train)
+    y_pred = pipeline.predict(X_test)
+
+    print("✅ Classification Report:\n")
+    print(classification_report(y_test, y_pred))
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    joblib.dump(pipeline, save_path)
+    print(f"\n✅ Model saved to {save_path}")
+
+
+if __name__ == "__main__":
+    print("📦 Loading labeled data...")
+    X, y = load_and_prepare_data(LABEL_CSV_PATH)
+
+    print("⚖️ Balancing classes...")
+    X_balanced, y_balanced = balance_data(X, y)
+
+    print("🧠 Training model...")
+    train_and_save_model(X_balanced, y_balanced, MODEL_SAVE_PATH)
