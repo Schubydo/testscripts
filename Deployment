@@ -2,6 +2,75 @@ import pandas as pd
 import joblib
 import numpy as np
 
+def standardize_sov_file_with_summary(excel_path, model_path, threshold=0.7):
+    """
+    Predicts and standardizes column headers from an SoV Excel file using a saved ML model.
+
+    Parameters:
+        excel_path (str): Path to Excel file containing schedule of values.
+        model_path (str): Path to trained model (joblib .pkl file).
+        threshold (float): Confidence threshold for accepting predictions.
+
+    Returns:
+        standardized_df (pd.DataFrame): SoV DataFrame with standardized column names.
+        summary_df (pd.DataFrame): Mapping summary with original column, predicted label, and confidence.
+    """
+    # Load file and model
+    df = pd.read_excel(excel_path)
+    model = joblib.load(model_path)
+    classes = model.classes_
+    
+    column_predictions = []
+
+    for col in df.columns:
+        sample_vals = df[col].dropna().astype(str).head(3).tolist()
+        sample_text = "; ".join(sample_vals)
+        feature_text = f"{col} | {sample_text}"
+
+        proba = model.predict_proba([feature_text])[0]
+        max_idx = np.argmax(proba)
+        max_class = classes[max_idx]
+        max_conf = proba[max_idx]
+
+        if max_conf >= threshold:
+            column_predictions.append({
+                "original_column": col,
+                "predicted_label": max_class,
+                "confidence": round(max_conf, 3)
+            })
+
+    prediction_df = pd.DataFrame(column_predictions)
+
+    # Resolve duplicates: keep only most confident prediction per standard label
+    best_predictions = (
+        prediction_df
+        .sort_values(by="confidence", ascending=False)
+        .drop_duplicates(subset=["predicted_label"], keep="first")
+    )
+
+    # Build standardized DataFrame
+    standardized_df = pd.DataFrame()
+    for _, row in best_predictions.iterrows():
+        standardized_df[row["predicted_label"]] = df[row["original_column"]]
+
+    # Prepare summary with skipped and unmapped columns
+    mapped_cols = best_predictions["original_column"].tolist()
+    all_cols = df.columns.tolist()
+    skipped = [col for col in all_cols if col not in mapped_cols]
+
+    for col in skipped:
+        prediction_df = prediction_df.append({
+            "original_column": col,
+            "predicted_label": "unmapped",
+            "confidence": 0.0
+        }, ignore_index=True)
+
+    summary_df = prediction_df.sort_values(by="confidence", ascending=False)
+
+    return standardized_df, summary_dfimport pandas as pd
+import joblib
+import numpy as np
+
 def standardize_sov_file(excel_path, model_path, threshold=0.7):
     """
     Standardizes an SoV Excel file by mapping its columns to a template using a trained ML model.
