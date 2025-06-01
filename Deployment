@@ -1,0 +1,61 @@
+import pandas as pd
+import joblib
+import numpy as np
+
+def standardize_sov_file(excel_path, model_path, threshold=0.7):
+    """
+    Standardizes an SoV Excel file by mapping its columns to a template using a trained ML model.
+
+    Parameters:
+        excel_path (str): Path to the input Excel file.
+        model_path (str): Path to the saved model (.pkl file).
+        threshold (float): Minimum confidence to accept a prediction.
+
+    Returns:
+        pd.DataFrame: A new DataFrame with standardized column names.
+    """
+
+    # Load input file
+    df = pd.read_excel(excel_path)
+    original_columns = df.columns.tolist()
+
+    # Load trained model
+    model = joblib.load(model_path)
+    classes = model.classes_
+
+    column_predictions = []
+
+    for col in original_columns:
+        sample_vals = df[col].dropna().astype(str).astype(str).head(3).tolist()
+        sample_text = "; ".join(sample_vals)
+        feature_text = f"{col} | {sample_text}"
+
+        proba = model.predict_proba([feature_text])[0]
+        max_idx = np.argmax(proba)
+        max_class = classes[max_idx]
+        max_conf = proba[max_idx]
+
+        if max_conf >= threshold:
+            column_predictions.append({
+                "original_column": col,
+                "predicted_label": max_class,
+                "confidence": max_conf
+            })
+
+    # Keep only the most confident prediction per predicted_label
+    prediction_df = pd.DataFrame(column_predictions)
+    best_predictions = (
+        prediction_df
+        .sort_values(by="confidence", ascending=False)
+        .drop_duplicates(subset=["predicted_label"], keep="first")
+    )
+
+    # Build the standardized output DataFrame
+    standardized = pd.DataFrame()
+
+    for _, row in best_predictions.iterrows():
+        std_col = row["predicted_label"]
+        orig_col = row["original_column"]
+        standardized[std_col] = df[orig_col]
+
+    return standardized
