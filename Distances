@@ -1,0 +1,37 @@
+import pandas as pd
+from geopy.distance import geodesic
+
+# === CONFIGURATION ===
+# Path to your Excel file
+excel_file = "your_file.xlsx"
+
+# The column names in your Excel sheet
+lat_column = "Latitude"
+lon_column = "Longitude"
+
+# Reference location (e.g., building of interest)
+reference_location = (40.7128, -74.0060)  # Example: New York City
+
+# Distance threshold in kilometers
+max_distance_km = 1.0
+
+# === LOAD DATA ===
+df = pd.read_excel(excel_file)
+
+# === FUNCTION TO COMPUTE DISTANCE ===
+def compute_distance(row):
+    building_location = (row[lat_column], row[lon_column])
+    return geodesic(reference_location, building_location).kilometers
+
+# === COMPUTE DISTANCES ===
+df["Distance_km"] = df.apply(compute_distance, axis=1)
+
+# === FILTER NEARBY BUILDINGS ===
+nearby_df = df[df["Distance_km"] <= max_distance_km]
+
+# === OUTPUT ===
+print(f"Found {len(nearby_df)} buildings within {max_distance_km} km of the reference location.")
+print(nearby_df)
+
+# Optional: Save result to a new Excel file
+nearby_df.to_excel("nearby_buildings.xlsx", index=False)
