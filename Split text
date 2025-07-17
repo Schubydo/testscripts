@@ -1,0 +1,55 @@
+from docx import Document
+from docx.oxml.shared import OxmlElement
+from docx.oxml import parse_xml
+from copy import deepcopy
+
+def find_split_index(doc, phrase):
+    """Find index in the body XML where the phrase appears."""
+    for idx, el in enumerate(doc.element.body):
+        if el.text and phrase in el.text:
+            return idx
+        # Also check for paragraphs
+        if el.tag.endswith('}p'):
+            texts = [node.text for node in el.iter() if node.text]
+            for t in texts:
+                if phrase in t:
+                    return idx
+    return -1
+
+def copy_elements(source, start=0, end=None):
+    """Copy XML elements from source body."""
+    elements = list(source.element.body)
+    if end is None:
+        end = len(elements)
+    return [deepcopy(el) for el in elements[start:end]]
+
+# Load documents
+working_doc = Document("working.docx")
+template_doc = Document("template.docx")
+
+# Find split point
+split_phrase = "Modelled NAT Catastrophe"
+working_split_idx = find_split_index(working_doc, split_phrase)
+template_split_idx = find_split_index(template_doc, split_phrase)
+
+# Sanity check
+if working_split_idx == -1 or template_split_idx == -1:
+    raise ValueError(f"Couldn't find the phrase '{split_phrase}' in one of the documents.")
+
+# Prepare new document
+final_doc = Document()
+
+# Remove default empty paragraph
+final_doc._body.clear_content()
+
+# Add page 1 (everything before split) from working
+for el in copy_elements(working_doc, 0, working_split_idx):
+    final_doc.element.body.append(el)
+
+# Add pages 2–4 (from split to end) from template
+for el in copy_elements(template_doc, template_split_idx):
+    final_doc.element.body.append(el)
+
+# Save
+final_doc.save("final_combined.docx")
+print("✅ Document merged and saved as final_combined.docx")
