@@ -1,4 +1,87 @@
 from docx import Document
+from copy import deepcopy
+
+def find_section_with_header_phrase(doc, phrase):
+    """Finds the section index where the header contains a given phrase."""
+    for i, section in enumerate(doc.sections):
+        header = section.header
+        for para in header.paragraphs:
+            if phrase in para.text:
+                return i
+    return -1
+
+def copy_section_content(source_doc, start_section_idx, include_headers=False):
+    """Copy section content and optionally headers/footers starting from a section."""
+    new_doc = Document()
+    new_doc._body.clear_content()  # remove initial empty paragraph
+
+    # Copy body content from the given section onward
+    body_els = list(source_doc.element.body)
+    for el in body_els:
+        new_doc.element.body.append(deepcopy(el))
+
+    # Copy headers/footers if needed
+    if include_headers:
+        for i, sec in enumerate(source_doc.sections[start_section_idx:]):
+            new_sec = new_doc.sections[0] if i == 0 else new_doc.add_section(sec.start_type)
+            # Copy header
+            for j, para in enumerate(sec.header.paragraphs):
+                if j < len(new_sec.header.paragraphs):
+                    new_sec.header.paragraphs[j].text = para.text
+                else:
+                    new_sec.header.add_paragraph(para.text)
+            # Copy footer
+            for j, para in enumerate(sec.footer.paragraphs):
+                if j < len(new_sec.footer.paragraphs):
+                    new_sec.footer.paragraphs[j].text = para.text
+                else:
+                    new_sec.footer.add_paragraph(para.text)
+
+    return new_doc
+
+# Load documents
+working_doc = Document("working.docx")
+template_doc = Document("template.docx")
+
+# Find section in template with header phrase
+split_phrase = "Modelled NAT Catastrophe"
+target_section_index = find_section_with_header_phrase(template_doc, split_phrase)
+
+if target_section_index == -1:
+    raise ValueError(f"Could not find the header with phrase '{split_phrase}'.")
+
+# --- Create the final document ---
+
+# 1. Copy everything from working doc up to that section (assume just one section for page 1)
+final_doc = Document()
+final_doc._body.clear_content()
+
+for el in working_doc.element.body:
+    final_doc.element.body.append(deepcopy(el))
+
+# 2. Add content from template starting from section with the target header
+template_body_elements = template_doc.element.body
+for el in template_body_elements:
+    final_doc.element.body.append(deepcopy(el))
+
+# 3. Replace headers/footers from page 2 onwards
+# (Here we just copy all headers/footers from that template section)
+source_section = template_doc.sections[target_section_index]
+target_section = final_doc.sections[-1]
+
+# Copy header
+target_section.header.is_linked_to_previous = False
+for para in source_section.header.paragraphs:
+    target_section.header.add_paragraph(para.text)
+
+# Copy footer
+target_section.footer.is_linked_to_previous = False
+for para in source_section.footer.paragraphs:
+    target_section.footer.add_paragraph(para.text)
+
+# Save result
+final_doc.save("final_with_headers.docx")
+print("✅ Saved as final_with_headers.docx")from docx import Document
 from docx.oxml.shared import OxmlElement
 from docx.oxml import parse_xml
 from copy import deepcopy
