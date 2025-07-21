@@ -1,0 +1,26 @@
+import xml.etree.ElementTree as ET
+
+ns = {
+    'ss': 'urn:schemas-microsoft-com:office:spreadsheet'
+}
+
+tree = ET.parse("your_file.xls")
+root = tree.getroot()
+
+# Find the first worksheet
+worksheet = root.find('.//ss:Worksheet', ns)
+table = worksheet.find('.//ss:Table', ns)
+
+data = []
+for row in table.findall('ss:Row', ns):
+    row_data = []
+    for cell in row.findall('ss:Cell', ns):
+        data_elem = cell.find('ss:Data', ns)
+        value = data_elem.text if data_elem is not None else ''
+        row_data.append(value)
+    data.append(row_data)
+
+# Optional: convert to DataFrame
+import pandas as pd
+df = pd.DataFrame(data[1:], columns=data[0])  # First row = header
+print(df)
